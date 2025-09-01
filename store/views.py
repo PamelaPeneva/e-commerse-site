@@ -1,3 +1,5 @@
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 
@@ -19,13 +21,19 @@ def store(request, category_slug=None):
     if category_slug is not None:
         categories = get_object_or_404(Category, slug=category_slug)
         products = Product.objects.filter(category=categories, is_available=True)
+        paginator = Paginator(products, 1)
+        page = request.GET.get('page')
+        paged_products = paginator.get_page(page)
         products_count = products.count()
     else:
-        products = Product.objects.filter(is_available=True)
+        products = Product.objects.filter(is_available=True).order_by('id')
+        paginator = Paginator(products, 3)
+        page = request.GET.get('page')
+        paged_products = paginator.get_page(page)
         products_count = products.count()
 
     context = {
-        'products': products,
+        'products': paged_products,
         'products_count': products_count
     }
     return render(request, 'store.html', context)
@@ -47,3 +55,20 @@ def product_detail(request, category_slug, item_slug):
         'in_cart': in_cart,
     }
     return render(request, 'product-detail.html', context)
+
+def search(request):
+    search_querry = request.GET.get('search_querry')
+    if search_querry:
+        products = Product.objects.filter(
+            Q(category__category_name__icontains=search_querry) |
+            Q(product_name__icontains=search_querry)).order_by("-created_date")
+        products_count = products.count()
+    else:
+        products = None
+        products_count = 0
+
+    context = {
+        'products': products,
+        'products_count': products_count
+    }
+    return render(request, 'store.html',context)
