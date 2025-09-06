@@ -35,7 +35,9 @@
 			<div class="aside"><img src="{{ cart_item.product.images.url }}" class="img-sm"></div>
 			<figcaption class="info">
 				<a href="{% url 'product_detail' cart_item.product.category.slug cart_item.product.slug %}" class="title text-dark">{{ cart_item.product.product_name }}</a>
-				<p class="text-muted small">Color: 25 Mpx <br> Size: Canon</p>
+				{% for v in cart_item.variations.all %}
+                    {{ v.variation_category }}: {{ v.variation_value }}<br> 
+                {% endfor %}   
 			</figcaption>
 		</figure>
 	</td>
@@ -45,12 +47,22 @@
 						<div class="input-group input-spinner">
 							<div class="input-group-prepend">
                             {#          minus icon                      #}
-							<a href="{% url 'remove_cart' cart_item.product.id %}" class="btn btn-light" type="button" id="button-plus"> <i class="fa fa-minus"></i> </a>
+                             <form action="{% url 'update_cart' cart_item.product.id cart_item.id %}" method="post">
+                                 <input type="hidden" name="quantity_change" value="-1">
+                                 {% csrf_token %}
+                                 <button class="btn btn-light" type="submit" id="button-plus"> <i class="fa fa-minus"></i> </button>
+                             </form>      
 							</div>
+                            
 							<input type="text" class="form-control"  value="{{ cart_item.quantity }}">
+                            
 							<div class="input-group-append">
                             {#          plus icon                      #}
-							<a href="{% url 'add_cart' cart_item.product.id %}" class="btn btn-light" type="button" id="button-minus"> <i class="fa fa-plus"></i> </a>
+                             <form action="{% url 'update_cart' cart_item.product.id cart_item.id %}" method="post">
+                                 <input type="hidden" name="quantity_change" value="1">
+                                 {% csrf_token %}
+                                 <button class="btn btn-light" type="submit" id="button-minus"> <i class="fa fa-plus"></i> </button>
+                             </form>   
 							</div>
 						</div> <!-- input-group.// -->
 					</div> <!-- col.// -->
@@ -62,7 +74,10 @@
 		</div> <!-- price-wrap .// -->
 	</td>
 	<td class="text-right"> 
-	<a href="{% url 'delete_cart' cart_item.product.id %}" class="btn btn-danger"> Remove</a>
+        <form action="{% url 'delete_cart' cart_item.product.id cart_item.id %}" method="post">
+             {% csrf_token %}
+             <button class="btn btn-danger" type="submit" onclick="alert('Are you sure')"> Remove </button>
+        </form>  
 	</td>
 </tr>
 {% endfor %}

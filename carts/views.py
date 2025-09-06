@@ -3,7 +3,7 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 
 from carts.models import Cart, CartItem
-from store.models import Product
+from store.models import Product, Variation
 
 """
 a shopping cart system using sessions to identify each user’s cart
@@ -20,43 +20,73 @@ def _cart_id(request):
     return cartid
 
 def add_cart(request, product_id):
+    # get the product:
     product = Product.objects.get(id=product_id)
 
-    # get the cart_id
-    try:
-        cart = Cart.objects.get(cart_id=_cart_id(request))
-    except Cart.DoesNotExist:  # create one if None
-        cart = Cart(cart_id=_cart_id(request))
-        cart.save()
+    # get the variations:
+    item_variations = []
+    if request.method == 'POST':
+        for item in request.POST:
+            key = item
+            value = request.POST.get(key)
+            if key != 'csrfmiddlewaretoken':
+                variation = Variation.objects.get(variation_category__iexact=key, variation_value__iexact=value)
+                item_variations.append(variation)
 
-    # when we add product in cart it becomes cart item
-    try: # increase quality if there
-        cart_item = CartItem.objects.get(cart=cart, product=product)
-        cart_item.quantity += 1
-        cart_item.save()
-    except CartItem.DoesNotExist:  # create if not
+    # Get or create the cart:
+    cart, created = Cart.objects.get_or_create(cart_id=_cart_id(request))
+
+    # get the cart item:
+    cart_item = CartItem.objects.filter(cart=cart, product=product)
+    # if the cart item already exists:
+    if cart_item:
+        # check if same variations exist
+        ex_var_list = []
+        ids = []
+        for item in cart_item:
+            existing_variation = item.variations.all()
+            ex_var_list.append(list(existing_variation))
+            ids.append(item.id)
+
+        # if yes increment quantity of existing
+        if item_variations in ex_var_list:
+            cart_item_to_inc_index = ex_var_list.index(item_variations) # 0
+            cart_item_to_inc_id = ids[cart_item_to_inc_index]  # 0, id 27
+            cart_item_to_increment = CartItem.objects.get(cart=cart, product=product, id=cart_item_to_inc_id)
+            cart_item_to_increment.quantity += 1
+            cart_item_to_increment.save()
+        else:  # make new cart item
+            new_cart_item = CartItem.objects.create(cart=cart, product=product, quantity=1)
+            new_cart_item.save()
+            new_cart_item.variations.set(item_variations)
+
+    else: # if the cart item doesnt exist:
         cart_item = CartItem(cart=cart, product=product, quantity=1)
         cart_item.save()
+        cart_item.variations.set(item_variations)
 
-    # return HttpResponse(cart_item.product.product_name)
-    # exit()
     return redirect('cart')
 
-def remove_cart(request, product_id):
+def update_cart(request, product_id, cart_item_id):
     cart = Cart.objects.get(cart_id=_cart_id(request))
     product = get_object_or_404(Product, id=product_id)
-    cart_item = CartItem.objects.get(cart=cart, product=product)
-    if cart_item.quantity > 1:
+    cart_item = CartItem.objects.get(cart=cart, product=product, id=cart_item_id)
+
+    quantity_change = request.POST.get('quantity_change')
+    if quantity_change == '1':
+        cart_item.quantity += 1
+        cart_item.save()
+    elif quantity_change == '-1':
         cart_item.quantity -= 1
         cart_item.save()
-    else:
-        cart_item.delete()
+        if  cart_item.quantity <= 0:
+            cart_item.delete()
     return redirect('cart')
 
-def delete_cart(request, product_id):
+def delete_cart(request, product_id, cart_item_id):
     cart = Cart.objects.get(cart_id=_cart_id(request))
     product = get_object_or_404(Product, id=product_id)
-    cart_item = CartItem.objects.get(cart=cart, product=product)
+    cart_item = CartItem.objects.get(cart=cart, product=product, id=cart_item_id)
     cart_item.delete()
     return redirect('cart')
 
