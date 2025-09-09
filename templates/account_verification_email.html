@@ -1,0 +1,11 @@
+{#turns off automatic escaping inside that block.#}
+{#the content is output exactly as it is, even if it contains raw HTML.#}
+{#without escaping instead of a clickable link, the user would just see raw HTML in their email.#}
+{% autoescape off %}
+        Hi {{ user.username }}
+
+        Click the link below to verify your email address:
+        http://{{ domain }}{% url 'activate' uidb64=uid token=token %}
+
+        If you think this is not you, please ignore this email.
+{% endautoescape %}
