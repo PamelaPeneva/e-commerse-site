@@ -69,7 +69,8 @@
                                 <a href="{% url 'login' %}">Sign in</a> <span class="dark-transp"> | </span>
                                 <a href="{% url 'register' %}"> Register</a>
                                 {% else %}
-                                <a href="{% url 'logout' %}"> Logout</a>
+                                <a href="{% url 'logout' %}"> Logout</a> <span class="dark-transp"> | </span>
+                                <a href="{% url 'dashboard' %}"> Dashboard</a>
                                 {% endif %}
                             </div>
                         </div>
